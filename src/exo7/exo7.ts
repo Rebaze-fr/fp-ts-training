@@ -1,7 +1,10 @@
 // `fp-ts` training Exercise 7
 // Manipulate collections with type-classes
 
+import { readonlyArray, readonlyMap, readonlySet, semigroup, string } from 'fp-ts';
 import { unimplemented } from '../utils';
+import { Ord as ordNumber, Eq as eqNumber } from 'fp-ts/lib/number';
+import { pipe } from 'fp-ts/lib/function';
 
 // In this exercise, we will learn how to manipulate essential collections
 // such as `Set` and `Map`.
@@ -41,7 +44,7 @@ export const numberArray: ReadonlyArray<number> = [7, 42, 1337, 1, 0, 1337, 42];
 // - `fp-ts` doesn't know how you want to define equality for the inner type
 //   and requires you to provide an `Eq` instance
 
-export const numberSet: ReadonlySet<number> = unimplemented();
+export const numberSet: ReadonlySet<number> = readonlySet.fromReadonlyArray(eqNumber)(numberArray);
 
 // Convert `numberSet` back to an array in `numberArrayFromSet`.
 // You need to use the `ReadonlySet` module from `fp-ts` instead of the
@@ -57,7 +60,7 @@ export const numberSet: ReadonlySet<number> = unimplemented();
 //   the values to be ordered in the output array, by providing an `Ord`
 //   instance.
 
-export const numberArrayFromSet: ReadonlyArray<number> = unimplemented();
+export const numberArrayFromSet: ReadonlyArray<number> = readonlySet.toReadonlyArray(ordNumber)(numberSet);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                    MAP                                    //
@@ -101,7 +104,13 @@ export const associativeArray: ReadonlyArray<[number, string]> = [
 //   long as they implement `Foldable`. Here, you can simply pass the standard
 //   `readonlyArray.Foldable` instance.
 
-export const mapWithLastEntry: ReadonlyMap<number, string> = unimplemented();
+export const mapWithLastEntry: ReadonlyMap<number, string> = pipe(
+  associativeArray,
+  readonlyMap.fromFoldable(eqNumber,
+    // TODO: magma?
+    semigroup.last(),
+    readonlyArray.Foldable)
+);
 
 // Same thing as above, except that upon key collision we don't want to simply
 // select the newest entry value but append it to the previous one.
@@ -122,7 +131,13 @@ export const mapWithLastEntry: ReadonlyMap<number, string> = unimplemented();
 // helpful in defining `mapWithLastEntry`?
 
 export const mapWithConcatenatedEntries: ReadonlyMap<number, string> =
-  unimplemented();
+  pipe(
+    associativeArray,
+    readonlyMap.fromFoldable(eqNumber,
+      // TODO:
+      string.Semigroup,
+      readonlyArray.Foldable)
+  );
 
 ///////////////////////////////////////////////////////////////////////////////
 //                     DIFFERENCE / UNION / INTERSECTION                     //
