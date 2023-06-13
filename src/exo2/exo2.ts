@@ -5,6 +5,8 @@ import { Either } from 'fp-ts/Either';
 import { Option } from 'fp-ts/Option';
 import { Failure } from '../Failure';
 import { unimplemented } from '../utils';
+import { either } from 'fp-ts';
+import { flow } from 'fp-ts/lib/function';
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                   SETUP                                   //
@@ -119,7 +121,18 @@ export const invalidTargetFailure = Failure.builder(
 
 export const checkTargetAndSmash: (
   target: Option<Character>,
-) => Either<NoTargetFailure | InvalidTargetFailure, Damage> = unimplemented;
+) => Either<NoTargetFailure | InvalidTargetFailure, Damage> = flow(
+  either.fromOption(() => noTargetFailure('No unit currently selected')),
+  either.chainW(flow(
+    // either.chain<NoTargetFailure | InvalidTargetFailure, Character, Character>(flow(
+    either.fromPredicate(
+      isWarrior,
+      c =>
+        invalidTargetFailure(c.toString() + ' cannot perform smash')
+    )
+  )),
+  either.map(c => c.smash()),
+);
 
 export const checkTargetAndBurn: (
   target: Option<Character>,
