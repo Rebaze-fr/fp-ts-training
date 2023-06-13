@@ -4,8 +4,7 @@
 import { Either } from 'fp-ts/Either';
 import { Option } from 'fp-ts/Option';
 import { Failure } from '../Failure';
-import { unimplemented } from '../utils';
-import { either } from 'fp-ts';
+import { either, option, readonlyArray } from 'fp-ts';
 import { flow } from 'fp-ts/lib/function';
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -136,11 +135,33 @@ export const checkTargetAndSmash: (
 
 export const checkTargetAndBurn: (
   target: Option<Character>,
-) => Either<NoTargetFailure | InvalidTargetFailure, Damage> = unimplemented;
+) => Either<NoTargetFailure | InvalidTargetFailure, Damage> = flow(
+  either.fromOption(() => noTargetFailure('No unit currently selected')),
+  either.chainW(flow(
+    // either.chain<NoTargetFailure | InvalidTargetFailure, Character, Character>(flow(
+    either.fromPredicate(
+      isWizard,
+      c =>
+        invalidTargetFailure(c.toString() + ' cannot perform burn')
+    )
+  )),
+  either.map(c => c.burn()),
+);
 
 export const checkTargetAndShoot: (
   target: Option<Character>,
-) => Either<NoTargetFailure | InvalidTargetFailure, Damage> = unimplemented;
+) => Either<NoTargetFailure | InvalidTargetFailure, Damage> = flow(
+  either.fromOption(() => noTargetFailure('No unit currently selected')),
+  either.chainW(flow(
+    // either.chain<NoTargetFailure | InvalidTargetFailure, Character, Character>(flow(
+    either.fromPredicate(
+      isArcher,
+      c =>
+        invalidTargetFailure(c.toString() + ' cannot perform shoot')
+    )
+  )),
+  either.map(c => c.shoot()),
+);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                  OPTION                                   //
@@ -160,13 +181,13 @@ export const checkTargetAndShoot: (
 // section, they should be easily reused for those use-cases.
 
 export const smashOption: (character: Character) => Option<Damage> =
-  unimplemented;
+  flow(option.some, checkTargetAndSmash, option.fromEither);
 
 export const burnOption: (character: Character) => Option<Damage> =
-  unimplemented;
+  flow(option.some, checkTargetAndBurn, option.fromEither);
 
 export const shootOption: (character: Character) => Option<Damage> =
-  unimplemented;
+  flow(option.some, checkTargetAndShoot, option.fromEither);
 
 ///////////////////////////////////////////////////////////////////////////////
 //                                   ARRAY                                   //
@@ -187,5 +208,9 @@ export interface TotalDamage {
   [Damage.Ranged]: number;
 }
 
-export const attack: (army: ReadonlyArray<Character>) => TotalDamage =
-  unimplemented;
+export const attack: (army: ReadonlyArray<Character>) => TotalDamage = army =>
+({
+  [Damage.Physical]: readonlyArray.filterMap(smashOption)(army).length,
+  [Damage.Magical]: readonlyArray.filterMap(burnOption)(army).length,
+  [Damage.Ranged]: readonlyArray.filterMap(shootOption)(army).length,
+});
